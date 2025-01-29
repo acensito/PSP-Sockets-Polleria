@@ -10,8 +10,7 @@ public class Servidor extends Thread {
     //atributos de la clase
     private final Socket skClient;
     private static final int PORT = 2000;
-    private static int pollos = 100;
-    private static int patatas = 100;
+    private static final Polleria polleria = new Polleria();
 
     //constructor de la clase
     public Servidor(Socket skClient) {
@@ -57,15 +56,8 @@ public class Servidor extends Thread {
             prepararPedido(cliente, pollosPedidos, patatasPedidas);
             
         } catch (Exception e) {
+            System.out.println("ERROR servidor corriendo entrada/salida datos");
         }
-    }
-
-
-    /**
-     * devuelve el estado de la polleria
-     */
-    private synchronized void getEstado() {
-        System.out.println("Tras el encargo, nos quedan: " + pollos + " pollos y " + patatas + " raciones de patatas.");
     }
 
     /**
@@ -74,27 +66,30 @@ public class Servidor extends Thread {
      * @param pollosPedidos numero de pollos que se ha pedido
      * @param patatasPedidas numero de patatas que se ha pedido
      */
-    private synchronized void prepararPedido(String cliente, int pollosPedidos, int patatasPedidas) {
-        //comprobamos si tenemos pollos, si no hay pollos, le anulamos el pedido
-        if (pollos < pollosPedidos) {
-            System.err.println("Lo sentimos " + cliente + ", no nos quedan pollos suficientes para su encargo. Pedido anulado.");
-            return;
+    private void prepararPedido(String cliente, int pollosPedidos, int patatasPedidas) {
+        
+        synchronized (polleria) {
+            //comprobamos si tenemos pollos, si no hay pollos, le anulamos el pedido
+            if (polleria.getPollos() < pollosPedidos) {
+                System.err.println("Lo sentimos " + cliente + ", no nos quedan pollos suficientes para su encargo. Pedido anulado.");
+                return;
+            }
+            
+            //determinando cuantas patatas se pueden servir
+            int patatasServidas = Math.min(patatasPedidas, polleria.getPatatas());
+
+            //descontamos el numero de pollos y patatas del grueso total
+            polleria.setPollos(pollosPedidos);
+            polleria.setPatatas(patatasServidas);
+
+            //mostramos mensaje del pedido que se sirve
+            System.out.println("Encargo " + cliente + ": "
+                + pollosPedidos + (pollosPedidos == 1 ? " pollo" : " pollos") + " y "
+                + patatasServidas + (patatasServidas == 1 ? " ración" : " raciones") + " de patatas.");
+
+            //mostramos mensaje del estado de la polleria
+            System.out.println("Tras el encargo, nos quedan: " + polleria.getPollos() + " pollos y " + polleria.getPatatas() + " raciones de patatas.");
         }
-        
-        //determinando cuantas patatas se pueden servir
-        int patatasServidas = Math.min(patatasPedidas, patatas);
-        
-        //descontamos el numero de pollos y patatas del grueso total
-        pollos -= pollosPedidos;
-        patatas -= patatasServidas;
-        
-        //mostramos mensaje del pedido que se sirve
-        System.out.println("Encargo " + cliente + ": "
-            + pollosPedidos + (pollosPedidos == 1 ? " pollo" : " pollos") + " y "
-            + patatasServidas + (patatasServidas == 1 ? " ración" : " raciones") + " de patatas.");
-        
-        //mostramos mensaje del estado de la polleria
-        getEstado();
 
     }
 
